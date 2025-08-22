@@ -1,3 +1,22 @@
-title: "Health Data Analysis Portfolio"
-description: "Biomedical and clinical data analysis projects"
-remote_theme: poole/hyde
+# Dependencies
+markdown:         redcarpet
+highlighter:      pygments
+
+# Permalinks
+permalink:        pretty
+relative_permalinks: true
+
+# Setup
+title:            Healthlytics
+tagline:          'Data Analysis Portfolio'
+description:      'Exploring patient data through R and Python, clustering, and interactive dashboards.'
+url:              https://yurim-nam.github.io/healthlytics/
+baseurl:          /
+
+paginate:         5
+
+# Custom vars
+version:          2.1.0
+
+github:
+  repo:           https://github.com/yurim-nam/healthlytics
