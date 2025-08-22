@@ -1,6 +1,4 @@
 
-title: "Health Data Analysis Portfolio"
-description: "Exploring patient data through R and Python, clustering, and interactive dashboards."
-remote_theme: pages-themes/minimal@v0.2.0
-plugins:
-- jekyll-remote-theme 
+theme: jekyll-theme-minimal
+logo: https://i.pinimg.com/736x/88/5f/17/885f1706ee3253468313e0c4757cece5.jpg
+title: Healthlytics
