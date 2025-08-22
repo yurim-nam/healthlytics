@@ -4,9 +4,8 @@ Exploring patient data through R and Python, clustering, and interactive dashboa
 
 
 ## Projects
-
+-------
 - [PANSS Patient Clustering](https://github.com/yurim-nam/healthlytics/blob/main/PANSS_Analysis/PANSS_Analysis_book.qmd): Clustering schizophrenia patients based on symptom scales and visualizing patterns with an interactive Shiny dashboard.
--
 - Coming soon
 
 ## About me
