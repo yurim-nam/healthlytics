@@ -2,7 +2,7 @@
 
 This project is an exploratory data analysis of different psychological test scores (mainly being PANSS) from multiple schizophrenia clinical trials, where patients were treated by different investigators under two treatment conditions (risperidone (atypical) vs. haloperidol (typical)). 
 
-The overall aim has been to explore patterns in symptom change across patients and investigators and to set up the dataset in a way that reflects the true patient–investigator relationships (so we avoid mismatched merges).
+The overall aim has been to explore patterns in symptom change across patients and investigators and to set up the dataset in a way that reflects the true patient–treatment effect.
 
 ## Main Objectives 
 ---
