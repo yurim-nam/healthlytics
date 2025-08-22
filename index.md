@@ -1,3 +1,7 @@
+layout: post
+title: Health Data Analysis Portfolio
+--- 
+
 # Health Data Analysis Portfolio
 Exploring patient data through R and Python, clustering, and interactive dashboards.
 
@@ -16,4 +20,8 @@ Hi! I’m Yurim Nam, a data analyst with a focus on biomedical and clinical rese
 - 📧 Email: yurim.ofw@gmail.com
 - 💼 LinkedIn: [https://www.linkedin.com/in/yurim-nam-a04248221/](https://www.linkedin.com/in/yurim-nam-a04248221/)  
 - 🐙 Undergraduate Bioinformatics GitHub: [https://github.com/heidinam-sd/bimm143](https://github.com/heidinam-sd/bimm143)  
+
+
+
+
 
