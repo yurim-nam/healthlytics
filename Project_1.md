@@ -1,7 +1,7 @@
 # Project 1: Schizophrenia PANSS Analysis
 
-This project is an exploratory data analysis of PANSS scores from multiple schizophrenia clinical trials, where patients were treated by different investigators under two treatment conditions (risperidone (atypical) vs. haloperidol (typical)). 
-The dataset includes both raw/semi-continuous PANSS change scores and binary response indicators (≥20% reduction from baseline). 
+This project is an exploratory data analysis of different psychological test scores (mainly being PANSS) from multiple schizophrenia clinical trials, where patients were treated by different investigators under two treatment conditions (risperidone (atypical) vs. haloperidol (typical)). 
+
 The overall aim has been to explore patterns in symptom change across patients and investigators and to set up the dataset in a way that reflects the true patient–investigator relationships (so we avoid mismatched merges).
 
 ## Main Objectives 
@@ -22,5 +22,7 @@ The overall aim has been to explore patterns in symptom change across patients a
 ## Data Source 
 ---
 (from the same Surrogate package)
+
 [PANSS dataset](https://r-packages.io/datasets/PANSS)
+
 [Schizo dataset](https://r-packages.io/datasets/Schizo)
