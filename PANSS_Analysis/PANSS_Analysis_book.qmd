@@ -3,6 +3,7 @@ title: "Schizophrenia PANSS Analysis"
 author: "Heidi Nam"
 format: html
 editor: visual
+permalink: /panss-analysis/
 ---
 
 ## 1. Loading data & installing packages
