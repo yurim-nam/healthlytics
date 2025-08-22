@@ -5,23 +5,15 @@ format: html
 editor: visual
 ---
 
-
-
 ## 1. Loading data & installing packages
 
 Installing packages
-
-
 
 ```{r}
 #install.packages(c("tidyverse", "cluster", "factoextra", "NbClust", "Rtsne"))
 ```
 
-
-
 Calling packages
-
-
 
 ```{r}
 library(tidyverse)
@@ -31,68 +23,44 @@ library(NbClust)
 library(Rtsne)
 ```
 
-
-
 Installing database from GitHub:
-
-
 
 ```{r}
 #install.packages("devtools")
 devtools::install_github("florianstijven/Surrogate-development")
 ```
 
-
-
 Data calling:
-
-
 
 ```{r}
 library(Surrogate)
 data("PANSS")
 ```
 
-
-
 Checking data:
-
-
 
 ```{r}
 head(PANSS)
 ```
 
-
-
 ## 2. Clustering Data
 
 Selecting only symptom variables:
-
-
 
 ```{r}
 panss_vars <- PANSS %>%
   select(Neg, Exc, Cog, Pos, Dep, Total)
 ```
 
-
-
 Scaling variables:
-
-
 
 ```{r}
 panss_scaled <- scale(panss_vars)
 ```
 
-
-
 Deciding number of clusters:
 
 -   we're using the silhouette method which allows us to measure how similar each patient is to its own cluster compared to others.
-
-
 
 ```{r}
 colSums(is.na(panss_vars))
@@ -107,8 +75,6 @@ panss_scaled <- scale(panss_vars)
 fviz_nbclust(panss_scaled, kmeans, method = "silhouette")
 ```
 
-
-
 ### Clustering Data - 2 subtypes
 
 Using kmeans()\
@@ -116,20 +82,14 @@ Using kmeans()\
 - setting clusters to 2 as that is the optimal number\
 - setting nstart to 25 to perform 25 times with different starts –\> allows stability and reliability
 
-
-
 ```{r}
 set.seed(123)   # reproducibility
 km_res <- kmeans(panss_scaled, centers = 2, nstart = 25) 
 ```
 
-
-
 Visualization:
 
 -   using fviz_cluster to show 2D scatterplot
-
-
 
 ```{r}
 fviz_cluster(km_res, data = panss_scaled,
@@ -137,11 +97,7 @@ fviz_cluster(km_res, data = panss_scaled,
              ggtheme = theme_minimal())
 ```
 
-
-
 Summary Table:
-
-
 
 ```{r}
 PANSS_complete <- PANSS[complete.cases(PANSS[, c("Neg","Exc","Cog","Pos","Dep","Total")]), ]
@@ -155,18 +111,12 @@ summary_table <- PANSS_complete %>%
 print(summary_table)
 ```
 
-
-
 Checking it compared to Treatment:
-
-
 
 ```{r}
 table(km_res$cluster, PANSS_complete$Treat)
 
 ```
-
-
 
 #### Discussion
 
@@ -176,17 +126,11 @@ But what if we tried to see if there were just more than two subtypes?
 
 ### Clustering Data - 3 subtypes
 
-
-
 ```{r}
 fviz_nbclust(panss_scaled, kmeans, method = "silhouette")
 ```
 
-
-
 trying with 3 subtype hypothesis:
-
-
 
 ```{r}
 set.seed(123)
@@ -208,8 +152,6 @@ summary_table_2 <- PANSS_complete %>%
 
 print(summary_table_2)
 ```
-
-
 
 #### Discussion
 
@@ -233,8 +175,6 @@ Thus, we could broadly say that
 
 ### Validating Clusters
 
-
-
 ```{r}
 install.packages("dplyr")
 ```
@@ -257,8 +197,6 @@ panss_data$cluster <- km_res_subtype$cluster
 X <- scale(panss_data[, panss_cols])
 ```
 
-
-
 #### Understanding silhouette score
 
 Computing this score allows us to see the silhouette width for each patient, which tells how well each patient fits in its assigned cluster.
@@ -271,23 +209,17 @@ By using X, our standardized PANSS data, we can compte a distance matrix between
 
 -   s(i) is below 0 –\> patient may be misclassified
 
-
-
 ```{r}
 # 1. Silhouette score
 sil <- silhouette(as.numeric(panss_data$cluster), dist(X))
 fviz_silhouette(sil)
 ```
 
-
-
 The below code performs a principal component analysis (PCA) on our X data. The graph can be interpreted as follows:
 
 -   Clusters: points of the same color form a cloud –\> represents patients in the same cluster; ellipse size shows how tightly clustered they are
 
 -   Overlap: if ellipses overlap, it shows that they are not sharply separated, if they are distinct, they show strong separation
-
-
 
 ```{r}
 pca_res <- prcomp(X)
@@ -297,8 +229,6 @@ fviz_pca_ind(pca_res,
              addEllipses = TRUE,
              legend.title = "Cluster")
 ```
-
-
 
 #### Discussion
 
@@ -311,8 +241,6 @@ Therefore, while our three subtypes remain clinically viable, the statistical vi
 ### Shiny App
 
 In addition to static clustering results, I built a small Shiny app to make the clustering analysis interactive. Instead of only looking at k-means results on PCA dimensions, the app lets you cluster patients directly on their PANSS subscale scores (Negative, Positive, Cognitive, Depressive, etc.) and adjust the number of clusters. This makes it easier to see how different symptom patterns group together and explore the data from different angles.
-
-
 
 ```{r}
 # app.R
@@ -396,13 +324,9 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 ```
 
-
-
 ## 3. Longitudinal Data comparison - Failed
 
 As now we know the clusters, we would like to see if clusters improve differently over time through treatment.
-
-
 
 ```{r}
 library(Surrogate)
@@ -413,13 +337,9 @@ data("Schizo_PANSS")
 head(Schizo_PANSS)
 ```
 
-
-
 Integrating cluster assignment to our longitudinal data.\
 \
 but first, making copies so it doesn't disturb our original data:
-
-
 
 ```{r}
 Long_data <- Schizo_PANSS
@@ -456,11 +376,7 @@ weeks <- paste0("Week", c(1,2,4,6,8))
 Long_data[weeks] <- lapply(Long_data[weeks], as.numeric)
 ```
 
-
-
 merging:
-
-
 
 ```{r}
 cluster_df <- data.frame(
@@ -479,21 +395,15 @@ Long_data_merged <- merge(
 )
 ```
 
-
-
 As I realized that the dataset would not merge successfully due to incomparable patient ID and investigator ID even with correct coding, I moved on from this specific dataset but worked with others.
 
 ## 4. Treatment vs Control effect on scores
 
 By using score changes from before and after treatment (control vs Risperidone) we want to identify their effects on continuous outcomes.
 
-
-
 ```{r}
 data("Schizo")
 ```
-
-
 
 We are now working with not just PANSS scores but also BPRS and CGI scores.
 
@@ -509,8 +419,6 @@ Using a combination of PANSS, BPRS and CGI, we can assess the effectiveness of o
 
 We performed a Welch two sample t-test to see if the presence of Risperidone created a statistically significant change in the symptom scores of the patients.
 
-
-
 ```{r}
 # PANSS change: Risperidone vs Control
 t.test(PANSS ~ Treat, data = Schizo)
@@ -521,8 +429,6 @@ t.test(BPRS ~ Treat, data = Schizo)
 # CGI change
 t.test(CGI ~ Treat, data = Schizo)
 ```
-
-
 
 #### Discussion
 
@@ -557,8 +463,6 @@ CGI
 ### Binary outcomes - Bar Plot visual
 
 As there is also PANSS_Bin, BPRS_Bin and CGI_Bin which are binary outcomes, we can compute proportions of patients with clinically meaningful improvement for Risperidone vs control.
-
-
 
 ```{r}
 Schizo_clean <- Schizo %>%
@@ -601,13 +505,9 @@ ggplot(binary_long, aes(x = Measure, y = Proportion, fill = Treat)) +
   theme_minimal(base_size = 12)
 ```
 
-
-
 #### Discussion
 
 As we can observe, BPRS and PANSS has shown more clinically meaningful improvement in their proportions of patients. However interestingly enough, CGI has shown a decrease in the proportion of improvement in patients. After further research:
-
-
 
 ```{r}
 # Check mean CGI_Bin by treatment
@@ -617,7 +517,4 @@ table(Schizo_clean$Treat, Schizo_clean$CGI_Bin)
 prop.table(table(Schizo_clean$Treat, Schizo_clean$CGI_Bin), margin = 1)
 ```
 
-
-
 We can see that this could have been caused by the fact that our patient numbers were a lot bigger in our Risperidone sample size versus our control, though a higher number of patients did show improvement. Thus, we can say that Risperidone still has a good improvement scale overall in terms of treatment effectiveness.
-
