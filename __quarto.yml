@@ -1,0 +1,14 @@
+project:
+  type: website
+  output-dir: docs   
+
+website:
+  title: "My Portfolio"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - text: Projects
+        menu:
+          - href: PANSS_Analysis/PANSS_Analysis_book.qmd
+            text: PANSS Analysis
