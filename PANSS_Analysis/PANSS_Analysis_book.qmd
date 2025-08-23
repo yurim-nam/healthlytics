@@ -325,6 +325,10 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 ```
 
+```{r}
+install.packages('rsconnect')
+```
+
 ## 3. Longitudinal Data comparison - Failed
 
 As now we know the clusters, we would like to see if clusters improve differently over time through treatment.
