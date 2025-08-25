@@ -3,5 +3,4 @@ project:
   output-dir: docs   
 
 format:
-  html:
-    standalone: false
+  gfm: true
