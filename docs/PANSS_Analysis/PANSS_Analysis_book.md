@@ -339,8 +339,14 @@ the data from different angles.
 [Launch Shiny App](https://yurimnam.shinyapps.io/PANSS_Analysis/)
 
 ``` r
-# app.R
+#app.R
 library(shiny)
+library(dplyr)
+library(ggplot2)
+library(Surrogate)
+data("PANSS")
+PANSS_complete <- PANSS[complete.cases(PANSS[, c("Neg","Exc","Cog","Pos","Dep","Total")]), ]
+
 
 set.seed(123)
 df <- PANSS_complete
