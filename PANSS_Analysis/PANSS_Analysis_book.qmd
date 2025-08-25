@@ -240,6 +240,8 @@ Therefore, while our three subtypes remain clinically viable, the statistical vi
 
 In addition to static clustering results, I built a small Shiny app to make the clustering analysis interactive. Instead of only looking at k-means results on PCA dimensions, the app lets you cluster patients directly on their PANSS subscale scores (Negative, Positive, Cognitive, Depressive, etc.) and adjust the number of clusters. This makes it easier to see how different symptom patterns group together and explore the data from different angles.
 
+[Launch Shiny App](https://yurimnam.shinyapps.io/PANSS_Analysis/)
+
 ```{r}
 # app.R
 library(shiny)

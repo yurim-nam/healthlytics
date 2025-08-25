@@ -336,6 +336,8 @@ Depressive, etc.) and adjust the number of clusters. This makes it
 easier to see how different symptom patterns group together and explore
 the data from different angles.
 
+[Launch Shiny App](https://yurimnam.shinyapps.io/PANSS_Analysis/)
+
 ``` r
 # app.R
 library(shiny)
