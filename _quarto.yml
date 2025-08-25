@@ -6,8 +6,6 @@ website:
   title: "Healthlytics"
   navbar:
     left:
-      - href: https://yurim-nam.github.io/healthlytics/
-        text: Home
       - text: Projects
         menu:
           - href: https://yurim-nam.github.io/healthlytics/Project_1.html
