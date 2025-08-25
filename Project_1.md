@@ -19,7 +19,7 @@ The overall aim has been to explore patterns in symptom change across patients a
 - PCA for dimensionality reduction
 - Bar Plots & Silhouette Plots
 
-## [Enjoy the code](docs/PANSS_Analysis/PANSS_Analysis_book.html)
+## [Enjoy the code](https://yurim-nam.github.io/healthlytics/PANSS_Analysis/PANSS_Analysis_book.html)
 
 ## Data Source 
 ---
