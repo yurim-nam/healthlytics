@@ -12,3 +12,8 @@ website:
         menu:
           - href: https://yurim-nam.github.io/healthlytics/Project_1.html
             text: Schizophrenia PANSS Analysis
+
+format:
+  html:
+    theme: default   # keep simple so Jekyll applies its theme
+    css: styles.css  # optional custom tweaks
