@@ -4,5 +4,4 @@ project:
 
 format:
   html:
-    theme: none
     standalone: false
