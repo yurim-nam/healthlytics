@@ -516,3 +516,9 @@ prop.table(table(Schizo_clean$Treat, Schizo_clean$CGI_Bin), margin = 1)
 ```
 
 We can see that this could have been caused by the fact that our patient numbers were a lot bigger in our Risperidone sample size versus our control, though a higher number of patients did show improvement. Thus, we can say that Risperidone still has a good improvement scale overall in terms of treatment effectiveness.
+
+## 5. Conclusion
+
+Our exploratory analysis of PANSS scores across multiple schizophrenia clinical trials revealed distinct patient subgroups based on symptom severity. Clustering analyses identified a "mild" cluster with relatively lower PANSS scores and a "severe" cluster with elevated negative and cognitive symptom dimensions. These results highlight the heterogeneity of schizophrenia symptoms at the patient level.
+
+From a data analyst perspective, these findings underscore the value of quantitative approaches, such as clustering and longitudinal symptom analysis, to uncover latent patterns in clinical data. Identifying these subgroups may inform more targeted treatment strategies and provide a framework for integrating patient-level variability into future neurobiological and pharmacological studies.
