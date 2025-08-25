@@ -2,15 +2,6 @@ project:
   type: website
   output-dir: docs   
 
-website:
-  title: "Healthlytics"
-  navbar:
-    left:
-      - text: Projects
-        menu:
-          - href: https://yurim-nam.github.io/healthlytics/Project_1.html
-            text: Schizophrenia PANSS Analysis
-
 format:
   html:
     theme: none
