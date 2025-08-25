@@ -13,5 +13,5 @@ website:
 
 format:
   html:
-    theme: default  
-    css: styles.css
+    theme: none
+    standalone: false
