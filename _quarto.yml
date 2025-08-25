@@ -3,12 +3,12 @@ project:
   output-dir: docs   
 
 website:
-  title: "My Portfolio"
+  title: "Healthlytics"
   navbar:
     left:
-      - href: index.md
+      - href: README.md
         text: Home
       - text: Projects
         menu:
-          - href: PANSS_Analysis/PANSS_Analysis_book.qmd
-            text: PANSS Analysis
+          - href: https://yurim-nam.github.io/healthlytics/Project_1.html
+            text: Schizophrenia PANSS Analysis
