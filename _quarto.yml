@@ -6,7 +6,7 @@ website:
   title: "My Portfolio"
   navbar:
     left:
-      - href: README.md
+      - href: index.md
         text: Home
       - text: Projects
         menu:
