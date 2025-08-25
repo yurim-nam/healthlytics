@@ -6,7 +6,7 @@ website:
   title: "Healthlytics"
   navbar:
     left:
-      - href: README.md
+      - href: https://yurim-nam.github.io/healthlytics/
         text: Home
       - text: Projects
         menu:
@@ -15,5 +15,5 @@ website:
 
 format:
   html:
-    theme: default   # keep simple so Jekyll applies its theme
-    css: styles.css  # optional custom tweaks
+    theme: default  
+    css: styles.css
