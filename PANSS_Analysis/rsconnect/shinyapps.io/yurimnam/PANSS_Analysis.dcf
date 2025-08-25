@@ -1,0 +1,13 @@
+name: PANSS_Analysis
+title: PANSS_Analysis
+username: yurimnam
+account: yurimnam
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15267026
+bundleId: 10818565
+url: https://yurimnam.shinyapps.io/PANSS_Analysis/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|PANSS_Analysis_book.qmd|PANSS_PCA/app.R
