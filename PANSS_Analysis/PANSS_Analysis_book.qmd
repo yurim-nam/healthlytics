@@ -25,7 +25,7 @@ Installing database from GitHub:
 
 ```{r}
 #install.packages("devtools")
-devtools::install_github("florianstijven/Surrogate-development")
+#devtools::install_github("florianstijven/Surrogate-development")
 ```
 
 Data calling:
@@ -174,7 +174,7 @@ Thus, we could broadly say that
 ### Validating Clusters
 
 ```{r}
-install.packages("dplyr")
+#install.packages("dplyr")
 ```
 
 ```{r}
@@ -320,10 +320,6 @@ server <- function(input, output) {
 }
 
 shinyApp(ui = ui, server = server)
-```
-
-```{r}
-install.packages('rsconnect')
 ```
 
 ## 3. Longitudinal Data comparison - Failed
