@@ -3,4 +3,4 @@ project:
   output-dir: docs   
 
 format:
-  gfm: true
+  gfm: {}
