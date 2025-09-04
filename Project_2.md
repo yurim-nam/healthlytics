@@ -14,7 +14,7 @@ This project is an exploration and attempt to analyze EEG waves based on the dif
 - MNE Python for EEG analysis 
 - Matplotlib for plotting information
 
-## [Enjoy the code](https://yurim-nam.github.io/healthlytics/docs/PANSS_Analysis/EEG_Analysis.html)
+## [Enjoy the code](https://yurim-nam.github.io/healthlytics/docs/EEG_Analysis.html)
 
 ## Data Source 
 ---
