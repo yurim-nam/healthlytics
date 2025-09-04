@@ -1,4 +1,4 @@
-# Project 2: Depression EEG Analysis
++# Project 2: Depression EEG Analysis
 
 This project is an exploration and attempt to analyze EEG waves based on the different frequency waves and find whether there is a distinct difference between patients with and without depression.
 
@@ -14,7 +14,7 @@ This project is an exploration and attempt to analyze EEG waves based on the dif
 - MNE Python for EEG analysis 
 - Matplotlib for plotting information
 
-## [Enjoy the code]
+## [Enjoy the code](https://yurim-nam.github.io/healthlytics/docs/PANSS_Analysis/EEG_Analysis.html)
 
 ## Data Source 
 ---
