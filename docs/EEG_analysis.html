@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>eeg_analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="EEG_analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="EEG_analysis_files/libs/quarto-html/quarto.js"></script>
+<script src="EEG_analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="EEG_analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="EEG_analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="EEG_analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="EEG_analysis_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="EEG_analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="EEG_analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="EEG_analysis_files/libs/bootstrap/bootstrap-1bc8a17f135ab3d594c857e9f48e611b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<p><a href="https://colab.research.google.com/github/yurim-nam/healthlytics/blob/main/EEG_Analysis.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a></p>
+<section id="project-2-eeg-depression-analysis" class="level1">
+<h1>Project 2: EEG Depression Analysis</h1>
+<p>We extract power spectral density features from 128-channel EEG recordings across multiple frequency bands (delta, theta, alpha, beta, gamma) and apply Random Forest classification to identify which brain oscillations are most discriminative between MDD patients and healthy controls, with statistical significance testing via permutation analysis.</p>
+<section id="downloading-organizing-dataset" class="level3">
+<h3 class="anchored" data-anchor-id="downloading-organizing-dataset">Downloading &amp; Organizing Dataset</h3>
+<div id="cell-3" class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># downloading data</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>wget <span class="op">-</span>O eeg_data.<span class="bu">zip</span> <span class="st">"https://reshare.ukdataservice.ac.uk/854301/4/854301_EEG_128Channels_Resting_Lanzhou_2015.zip"</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>unzip eeg_data.<span class="bu">zip</span> <span class="op">-</span>d eeg_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>As we noticed that the EEG files were in .mat (MATLAB) files, we wanted to inspect it before using MNE python.</p>
+<div id="cell-5" class="cell" data-outputid="08839bea-329d-4a11-d0d7-386bf432f34b">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scipy.io <span class="im">as</span> sio <span class="co"># needed to read .mat files</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>mat <span class="op">=</span> sio.loadmat(<span class="st">"/content/eeg_data/EEG_128channels_resting_lanzhou_2015/02010002rest 20150416 1017..mat"</span>, squeeze_me<span class="op">=</span><span class="va">True</span>, struct_as_record<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># squeeze_me = True | gets rid of unnecessary singleton dimensions</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># struct_as_record= False | Ensures MATLAB structs load as Python objects instead of opaque numpy record arrays.</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># makes sure that MATLAB data is easier to navigate through Python.</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Access the MATLAB variable inside</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>data_struct <span class="op">=</span> mat[<span class="st">'a02010002rest_20150416_1017mat'</span>]</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># If it's a MATLAB struct, extract the field containing the numeric EEG array</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># You can check fields with:</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">dir</span>(data_struct))</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract numeric EEG array - verifying data integrity</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>data_array <span class="op">=</span> np.array(data_struct.data)  <span class="co"># shape: (n_electrodes, n_samples)</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"EEG array shape:"</span>, data_array.shape) <span class="co"># helps confirm dimensions</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"NaNs:"</span>, np.isnan(data_array).<span class="bu">sum</span>()) <span class="co"># checks for missing data</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Min/Max:"</span>, np.<span class="bu">min</span>(data_array), np.<span class="bu">max</span>(data_array)) <span class="co"># shows amplitude range</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Sampling rate = shows how many data    points per s    econd were recorded.</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="bu">int</span>(mat[<span class="st">'samplingRate'</span>])</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Sampling rate:"</span>, sfreq)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['T', '__abs__', '__add__', '__and__', '__array__', '__array_finalize__', '__array_function__', '__array_interface__', '__array_namespace__', '__array_priority__', '__array_struct__', '__array_ufunc__', '__array_wrap__', '__bool__', '__buffer__', '__class__', '__class_getitem__', '__complex__', '__contains__', '__copy__', '__deepcopy__', '__delattr__', '__delitem__', '__dir__', '__divmod__', '__dlpack__', '__dlpack_device__', '__doc__', '__eq__', '__float__', '__floordiv__', '__format__', '__ge__', '__getattribute__', '__getitem__', '__getstate__', '__gt__', '__hash__', '__iadd__', '__iand__', '__ifloordiv__', '__ilshift__', '__imatmul__', '__imod__', '__imul__', '__index__', '__init__', '__init_subclass__', '__int__', '__invert__', '__ior__', '__ipow__', '__irshift__', '__isub__', '__iter__', '__itruediv__', '__ixor__', '__le__', '__len__', '__lshift__', '__lt__', '__matmul__', '__mod__', '__mul__', '__ne__', '__neg__', '__new__', '__or__', '__pos__', '__pow__', '__radd__', '__rand__', '__rdivmod__', '__reduce__', '__reduce_ex__', '__repr__', '__rfloordiv__', '__rlshift__', '__rmatmul__', '__rmod__', '__rmul__', '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__', '__rtruediv__', '__rxor__', '__setattr__', '__setitem__', '__setstate__', '__sizeof__', '__str__', '__sub__', '__subclasshook__', '__truediv__', '__xor__', 'all', 'any', 'argmax', 'argmin', 'argpartition', 'argsort', 'astype', 'base', 'byteswap', 'choose', 'clip', 'compress', 'conj', 'conjugate', 'copy', 'ctypes', 'cumprod', 'cumsum', 'data', 'device', 'diagonal', 'dot', 'dtype', 'dump', 'dumps', 'fill', 'flags', 'flat', 'flatten', 'getfield', 'imag', 'item', 'itemset', 'itemsize', 'mT', 'max', 'mean', 'min', 'nbytes', 'ndim', 'newbyteorder', 'nonzero', 'partition', 'prod', 'ptp', 'put', 'ravel', 'real', 'repeat', 'reshape', 'resize', 'round', 'searchsorted', 'setfield', 'setflags', 'shape', 'size', 'sort', 'squeeze', 'std', 'strides', 'sum', 'swapaxes', 'take', 'to_device', 'tobytes', 'tofile', 'tolist', 'tostring', 'trace', 'transpose', 'var', 'view']
+EEG array shape: (129, 75189)
+NaNs: 0
+Min/Max: -54210.3203125 5620.53564453125
+Sampling rate: 250</code></pre>
+</div>
+</div>
+<p>Building Raw MNE project</p>
+<p>We want to do this as we want to use MNE python to work with our data, but in its current state is not compatible with MNE functions. Thus, we’re building a Raw object and converting our data in order to use efficiently.</p>
+<div id="cell-7" class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>pip install mne <span class="co"># installing mne package</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-8" class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne <span class="im">import</span> create_info</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.io <span class="im">import</span> RawArray</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-9" class="cell" data-outputid="b876cec7-f87c-46e7-e742-8776879673a2">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># converts the EEG array to 64-bit floats (float64) for numerical stability in MNE.</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> data_array.astype(np.float64)  <span class="co"># shape (129, n_samples)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>n_channels <span class="op">=</span> data.shape[<span class="dv">0</span>]</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create channel names dynamically</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>ch_names <span class="op">=</span> [<span class="ss">f"Ch</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_channels)] <span class="co"># creates list of names for each electrode</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>ch_types <span class="op">=</span> [<span class="st">'eeg'</span>] <span class="op">*</span> n_channels <span class="co"># define channel type as EEG</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Create MNE info metadata - includes channel names, sampling frequency, and channel types</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> mne.create_info(ch_names<span class="op">=</span>ch_names, sfreq<span class="op">=</span>sfreq, ch_types<span class="op">=</span>ch_types)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Raw object - allows for filtering and analysis using MNE functions</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.RawArray(data, info) <span class="co"># converts numpy EEG array into MNE raw object</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(raw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Creating RawArray with float64 data, n_channels=129, n_times=75189
+    Range : 0 ... 75188 =      0.000 ...   300.752 secs
+Ready.
+&lt;RawArray | 129 x 75189 (300.8 s), ~74.1 MiB, data loaded&gt;</code></pre>
+</div>
+</div>
+<div id="cell-10" class="cell" data-outputid="f02e2c1c-0927-4a9f-f632-a0326df1c34a">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># helps us restrict to the 128 EEG channels only</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.RawArray(data[:<span class="dv">128</span>, :], mne.create_info(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    ch_names<span class="op">=</span>[<span class="ss">f"Ch</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">128</span>)],</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    sfreq<span class="op">=</span>sfreq,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    ch_types<span class="op">=</span>[<span class="st">'eeg'</span>]<span class="op">*</span><span class="dv">128</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Creating RawArray with float64 data, n_channels=128, n_times=75189
+    Range : 0 ... 75188 =      0.000 ...   300.752 secs
+Ready.</code></pre>
+</div>
+</div>
+</section>
+<section id="preprocessing-the-data" class="level3">
+<h3 class="anchored" data-anchor-id="preprocessing-the-data">Preprocessing the Data</h3>
+<p>In the code chunk below, we set band freuqncy for different wave types in EEG that we wish to explore. Our data has also been organized to where we can identify each EEG data towards correct patients with MDD or healthy control patients.</p>
+<div id="cell-12" class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># setting band frequency width for different wave types in EEG</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>bands <span class="op">=</span> {</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'delta'</span>: (<span class="dv">1</span>, <span class="dv">4</span>),</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'theta'</span>: (<span class="dv">4</span>, <span class="dv">8</span>),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'alpha'</span>: (<span class="dv">8</span>, <span class="dv">13</span>),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">'beta'</span>: (<span class="dv">13</span>, <span class="dv">30</span>),</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">'gamma'</span>: (<span class="dv">30</span>, <span class="dv">45</span>)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Organizing data for separation</p>
+<div id="cell-14" class="cell" data-outputid="b3dc1a54-189e-4812-eca6-80b331535fc6">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> glob <span class="co"># glob finds file paths matching a pattern</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Path to your folder with MAT files</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>folder_path <span class="op">=</span> <span class="st">"/content/eeg_data/EEG_128channels_resting_lanzhou_2015/"</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Get list of all MAT files in the folder</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>all_mat_files <span class="op">=</span> glob.glob(folder_path <span class="op">+</span> <span class="st">"*.mat"</span>) <span class="co"># collects all .mat files</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Found </span><span class="sc">{</span><span class="bu">len</span>(all_mat_files)<span class="sc">}</span><span class="ss"> files"</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(all_mat_files[:<span class="dv">5</span>])  <span class="co"># show first 5 files</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 53 files
+['/content/eeg_data/EEG_128channels_resting_lanzhou_2015/02020016rest 20150701 1040..mat', '/content/eeg_data/EEG_128channels_resting_lanzhou_2015/02030018_rest 20151208 1443.mat', '/content/eeg_data/EEG_128channels_resting_lanzhou_2015/02020023restnew 20150709 10.mat', '/content/eeg_data/EEG_128channels_resting_lanzhou_2015/02030002rest_new 20151022 1.mat', '/content/eeg_data/EEG_128channels_resting_lanzhou_2015/02020022rest 20150707 1452..mat']</code></pre>
+</div>
+</div>
+<div id="cell-15" class="cell" data-outputid="0fff07a9-edf2-4914-e683-395b6cd442bf">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Loading subject metadata - MDD vs HC patient labeling</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the Excel file</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>df_labels <span class="op">=</span> pd.read_excel(<span class="st">"/content/eeg_data/EEG_128channels_resting_lanzhou_2015/subjects_information_EEG_128channels_resting_lanzhou_2015.xlsx"</span>)  <span class="co"># columns: subject_id, type</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Strip spaces from column names</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>df_labels <span class="op">=</span> df_labels.rename(columns<span class="op">=</span><span class="kw">lambda</span> x: x.strip().replace(<span class="st">" "</span>, <span class="st">"_"</span>).lower())</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure IDs are strings and remove any leading apostrophe</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>df_labels[<span class="st">'subject_id'</span>] <span class="op">=</span> df_labels[<span class="st">'subject_id'</span>].astype(<span class="bu">str</span>).<span class="bu">str</span>.lstrip(<span class="st">"'"</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Check</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df_labels.head())</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to dictionary for easy lookup</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>label_dict <span class="op">=</span> <span class="bu">dict</span>(<span class="bu">zip</span>(df_labels[<span class="st">'subject_id'</span>], df_labels[<span class="st">'type'</span>]))</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Quick check</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="co"># print(label_dict['02010002'])  # should print 'MDD'</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(label_dict[<span class="st">'2010002'</span>])  <span class="co"># should print 'MDD'</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  subject_id type  age gender  education（years）  phq-9  ctq-sf  les  ssrs  \
+0    2010002  MDD   18      F                12     23      77 -143    31   
+1    2010004  MDD   25      F                19     12      53  -44    38   
+2    2010005  MDD   20      M                16     19      49   -3    28   
+3    2010006  MDD   42      M                16     16      59  -30    40   
+4    2010008  MDD   42      M                12     17      66  -71    44   
+
+   gad-7  psqi  unnamed:_11                              unnamed:_12  
+0     18    12          NaN                             abbreviation  
+1     13    11          NaN          MDD = Major Depressive Disorder  
+2     11     5          NaN                     HC = Healthy Control  
+3     12     9          NaN     PHQ-9 = Patient Health Questionnaire  
+4     18    13          NaN  CTQ-SF = Childhood Trauma Questionnaire  
+MDD</code></pre>
+</div>
+</div>
+</section>
+<section id="eeg-data-processing" class="level3">
+<h3 class="anchored" data-anchor-id="eeg-data-processing">EEG Data Processing</h3>
+<p>The following code executes these orders chronologically: 1. Read brain wave files (.mat files) 2. Identifies person and whether they have depression or are healthy 3. Removes electrical noise and interference (raw.filter) 4. Breaks down brain waves by frequency 5. Measures brain wave strength at each 128 electrodes 6. Creates a data table that organizes the information</p>
+<div id="cell-17" class="cell" data-outputid="fab26577-8caf-4306-c633-aa50e137971a">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> []</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> all_mat_files:</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    basename <span class="op">=</span> os.path.basename(f)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    subj_id_from_file <span class="op">=</span> basename[:<span class="dv">8</span>].lstrip(<span class="st">"0"</span>)  <span class="co"># match Excel IDs</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    group_label <span class="op">=</span> label_dict.get(subj_id_from_file, <span class="st">"Unknown"</span>)</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Load .mat</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    mat <span class="op">=</span> sio.loadmat(f, squeeze_me<span class="op">=</span><span class="va">True</span>, struct_as_record<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    eeg_var_name <span class="op">=</span> [k <span class="cf">for</span> k <span class="kw">in</span> mat.keys() <span class="cf">if</span> <span class="kw">not</span> k.startswith(<span class="st">"__"</span>) <span class="kw">and</span> k <span class="op">!=</span> <span class="st">'samplingRate'</span>][<span class="dv">0</span>]</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    data_struct <span class="op">=</span> mat[eeg_var_name]</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    data_array <span class="op">=</span> np.array(data_struct.data)  <span class="co"># (128, n_samples)</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>    sfreq <span class="op">=</span> <span class="bu">int</span>(mat[<span class="st">'samplingRate'</span>])</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create MNE RawArray</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    ch_names <span class="op">=</span> [<span class="ss">f"E</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(data_array.shape[<span class="dv">0</span>])]</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    ch_types <span class="op">=</span> [<span class="st">'eeg'</span>] <span class="op">*</span> data_array.shape[<span class="dv">0</span>]</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    info <span class="op">=</span> mne.create_info(ch_names<span class="op">=</span>ch_names, sfreq<span class="op">=</span>sfreq, ch_types<span class="op">=</span>ch_types)</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>    raw <span class="op">=</span> mne.io.RawArray(data_array, info)</span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>    raw.<span class="bu">filter</span>(<span class="dv">1</span>, <span class="dv">45</span>, fir_design<span class="op">=</span><span class="st">'firwin'</span>, verbose<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute PSD</span></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>    psd <span class="op">=</span> raw.compute_psd(fmin<span class="op">=</span><span class="dv">1</span>, fmax<span class="op">=</span><span class="dv">45</span>, n_fft<span class="op">=</span><span class="dv">1024</span>, method<span class="op">=</span><span class="st">'welch'</span>, average<span class="op">=</span><span class="st">'mean'</span>)</span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>    psds <span class="op">=</span> psd.get_data()</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>    freqs <span class="op">=</span> psd.freqs</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute bandpower per channel</span></span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>    band_powers <span class="op">=</span> {}</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band_name, (fmin, fmax) <span class="kw">in</span> bands.items():</span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>        idx <span class="op">=</span> (freqs <span class="op">&gt;=</span> fmin) <span class="op">&amp;</span> (freqs <span class="op">&lt;=</span> fmax)</span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>        band_powers[band_name] <span class="op">=</span> psds[:, idx].mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Build feature vector</span></span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a>    row <span class="op">=</span> {<span class="st">"subject"</span>: subj_id_from_file, <span class="st">"group"</span>: group_label}</span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band_name, values <span class="kw">in</span> band_powers.items():</span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> ch_idx, val <span class="kw">in</span> <span class="bu">enumerate</span>(values):</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>            row[<span class="ss">f"E</span><span class="sc">{</span>ch_idx<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>band_name<span class="sc">}</span><span class="ss">"</span>] <span class="op">=</span> val</span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>    features.append(row)</span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to DataFrame</span></span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>df_features <span class="op">=</span> pd.DataFrame(features)</span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df_features.shape)</span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df_features.head())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Creating RawArray with float64 data, n_channels=129, n_times=75101
+    Range : 0 ... 75100 =      0.000 ...   300.400 secs
+Ready.
+Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75164</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Range : 0 ... 75163 =      0.000 ...   300.652 secs
+Ready.
+Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75201
+    Range : 0 ... 75200 =      0.000 ...   300.800 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75525
+    Range : 0 ... 75524 =      0.000 ...   302.096 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75139
+    Range : 0 ... 75138 =      0.000 ...   300.552 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=83164
+    Range : 0 ... 83163 =      0.000 ...   332.652 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=76039
+    Range : 0 ... 76038 =      0.000 ...   304.152 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75126
+    Range : 0 ... 75125 =      0.000 ...   300.500 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75139
+    Range : 0 ... 75138 =      0.000 ...   300.552 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75158
+    Range : 0 ... 75157 =      0.000 ...   300.628 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75126
+    Range : 0 ... 75125 =      0.000 ...   300.500 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75189
+    Range : 0 ... 75188 =      0.000 ...   300.752 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75114
+    Range : 0 ... 75113 =      0.000 ...   300.452 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=83876
+    Range : 0 ... 83875 =      0.000 ...   335.500 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75401
+    Range : 0 ... 75400 =      0.000 ...   301.600 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75652
+    Range : 0 ... 75651 =      0.000 ...   302.604 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75151
+    Range : 0 ... 75150 =      0.000 ...   300.600 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75389
+    Range : 0 ... 75388 =      0.000 ...   301.552 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75163
+    Range : 0 ... 75162 =      0.000 ...   300.648 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75513
+    Range : 0 ... 75512 =      0.000 ...   302.048 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75114
+    Range : 0 ... 75113 =      0.000 ...   300.452 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75127
+    Range : 0 ... 75126 =      0.000 ...   300.504 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75376
+    Range : 0 ... 75375 =      0.000 ...   301.500 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75351
+    Range : 0 ... 75350 =      0.000 ...   301.400 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75114
+    Range : 0 ... 75113 =      0.000 ...   300.452 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75188
+    Range : 0 ... 75187 =      0.000 ...   300.748 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75089
+    Range : 0 ... 75088 =      0.000 ...   300.352 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75101
+    Range : 0 ... 75100 =      0.000 ...   300.400 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75275
+    Range : 0 ... 75274 =      0.000 ...   301.096 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=78639
+    Range : 0 ... 78638 =      0.000 ...   314.552 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75276
+    Range : 0 ... 75275 =      0.000 ...   301.100 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75126
+    Range : 0 ... 75125 =      0.000 ...   300.500 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75127
+    Range : 0 ... 75126 =      0.000 ...   300.504 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=82651
+    Range : 0 ... 82650 =      0.000 ...   330.600 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75126
+    Range : 0 ... 75125 =      0.000 ...   300.500 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75176
+    Range : 0 ... 75175 =      0.000 ...   300.700 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75151
+    Range : 0 ... 75150 =      0.000 ...   300.600 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75226
+    Range : 0 ... 75225 =      0.000 ...   300.900 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75402
+    Range : 0 ... 75401 =      0.000 ...   301.604 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75688
+    Range : 0 ... 75687 =      0.000 ...   302.748 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75750
+    Range : 0 ... 75749 =      0.000 ...   302.996 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Creating RawArray with float64 data, n_channels=129, n_times=75339
+    Range : 0 ... 75338 =      0.000 ...   301.352 secs
+Ready.
+Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75101
+    Range : 0 ... 75100 =      0.000 ...   300.400 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75151
+    Range : 0 ... 75150 =      0.000 ...   300.600 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75176
+    Range : 0 ... 75175 =      0.000 ...   300.700 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75139
+    Range : 0 ... 75138 =      0.000 ...   300.552 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75113
+    Range : 0 ... 75112 =      0.000 ...   300.448 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75289
+    Range : 0 ... 75288 =      0.000 ...   301.152 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75138
+    Range : 0 ... 75137 =      0.000 ...   300.548 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75189
+    Range : 0 ... 75188 =      0.000 ...   300.752 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75126
+    Range : 0 ... 75125 =      0.000 ...   300.500 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75251
+    Range : 0 ... 75250 =      0.000 ...   301.000 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+Creating RawArray with float64 data, n_channels=129, n_times=75201
+    Range : 0 ... 75200 =      0.000 ...   300.800 secs
+Ready.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Effective window size : 4.096 (s)
+(53, 647)
+   subject group   E1_delta   E2_delta  E3_delta  E4_delta  E5_delta  \
+0  2020016    HC  14.357137   6.091257  4.935259  3.912784  1.616299   
+1  2030018    HC   5.585025   6.181733  2.798913  2.074065  2.088062   
+2  2020023    HC  18.659785  10.290096  5.680160  2.760288  1.529962   
+3  2030002    HC   7.292209   8.077513  8.831777  2.764896  1.344259   
+4  2020022    HC   6.923784   9.487876  8.102684  5.200795  2.267807   
+
+   E6_delta  E7_delta   E8_delta  ...  E120_gamma  E121_gamma  E122_gamma  \
+0  0.779119  0.316180  14.402356  ...    0.109318    0.109956    0.169912   
+1  2.087401  4.138027   6.652720  ...    0.162206    0.173991    0.187726   
+2  0.717999  0.273209  21.577004  ...    0.212292    0.237598    0.191508   
+3  0.510302  0.364555  69.034304  ...    0.109659    0.125588    0.136122   
+4  1.915491  1.367538  30.534749  ...    0.121753    0.117785    0.112432   
+
+   E123_gamma  E124_gamma  E125_gamma  E126_gamma  E127_gamma  E128_gamma  \
+0    0.206390    0.090715    0.115199    0.145024    0.230627    0.140164   
+1    0.098310    0.084301    0.189698    0.213969    0.343275    0.483660   
+2    0.187147    0.137719    0.234375    0.229921    0.228296    0.262655   
+3    0.091640    0.060442    0.133187    0.183672    0.237924    0.174583   
+4    0.103461    0.094369    0.117629    0.134905    0.144046    0.130916   
+
+   E129_gamma  
+0         0.0  
+1         0.0  
+2         0.0  
+3         0.0  
+4         0.0  
+
+[5 rows x 647 columns]</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/tmp/ipython-input-1134258696.py:24: UserWarning: Zero value in spectrum for channel E129
+  psd = raw.compute_psd(fmin=1, fmax=45, n_fft=1024, method='welch', average='mean')</code></pre>
+</div>
+</div>
+</section>
+<section id="quick-exploratory-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="quick-exploratory-analysis">Quick Exploratory Analysis</h3>
+<p>As I wanted to get an initial understanding of which EEG frequency bands might be most informative for distinguishing MDD patients from healthy controls, I used a Random Forest classifier for exploratory analysis. This model analyzed the power of different frequency bands (delta, theta, alpha, beta, gamma) across all 128 electrodes to identify potential patterns that could separate MDD subjects from healthy controls.</p>
+<p>Using this trained model, I calculated feature importance scores for each individual EEG measurement, which indicates how much each specific electrode-frequency combination contributes to correctly classifying subjects - where higher scores mean greater contribution to the classification decision. To get an overview of which frequency bands were most relevant overall, I summed the importance scores across all 128 electrodes for each frequency band, providing a single importance value per brain wave type.</p>
+<p>This exploratory approach gave me initial insights into which aspects of brain activity might be most altered in depression, helping to identify promising frequency bands for further investigation.</p>
+<div id="cell-19" class="cell">
+<div class="sourceCode cell-code" id="cb122"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb122-1"><a href="#cb122-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Features (all columns except 'subject' and 'group')</span></span>
+<span id="cb122-2"><a href="#cb122-2" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> df_features.drop(columns<span class="op">=</span>[<span class="st">"subject"</span>, <span class="st">"group"</span>]).values</span>
+<span id="cb122-3"><a href="#cb122-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb122-4"><a href="#cb122-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Labels</span></span>
+<span id="cb122-5"><a href="#cb122-5" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> df_features[<span class="st">"group"</span>].values</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-20" class="cell">
+<div class="sourceCode cell-code" id="cb123"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.ensemble <span class="im">import</span> RandomForestClassifier</span>
+<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb123-3"><a href="#cb123-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize and fit</span></span>
+<span id="cb123-4"><a href="#cb123-4" aria-hidden="true" tabindex="-1"></a>clf <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">500</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb123-5"><a href="#cb123-5" aria-hidden="true" tabindex="-1"></a>clf.fit(X, y)</span>
+<span id="cb123-6"><a href="#cb123-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb123-7"><a href="#cb123-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Get feature importances</span></span>
+<span id="cb123-8"><a href="#cb123-8" aria-hidden="true" tabindex="-1"></a>importances <span class="op">=</span> clf.feature_importances_</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-21" class="cell" data-outputid="8b159f41-7462-4c42-e7dd-8f9abde44fa2">
+<div class="sourceCode cell-code" id="cb124"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb124-1"><a href="#cb124-1" aria-hidden="true" tabindex="-1"></a>n_channels <span class="op">=</span> <span class="dv">128</span></span>
+<span id="cb124-2"><a href="#cb124-2" aria-hidden="true" tabindex="-1"></a>band_importances <span class="op">=</span> {}</span>
+<span id="cb124-3"><a href="#cb124-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb124-4"><a href="#cb124-4" aria-hidden="true" tabindex="-1"></a><span class="co"># For each band, sum importance across all channels</span></span>
+<span id="cb124-5"><a href="#cb124-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, band_name <span class="kw">in</span> <span class="bu">enumerate</span>(bands.keys()):</span>
+<span id="cb124-6"><a href="#cb124-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># indices for this band in the flattened feature array</span></span>
+<span id="cb124-7"><a href="#cb124-7" aria-hidden="true" tabindex="-1"></a>    band_idx <span class="op">=</span> <span class="bu">list</span>(<span class="bu">range</span>(i, n_channels<span class="op">*</span><span class="bu">len</span>(bands), <span class="bu">len</span>(bands)))</span>
+<span id="cb124-8"><a href="#cb124-8" aria-hidden="true" tabindex="-1"></a>    band_importances[band_name] <span class="op">=</span> importances[band_idx].<span class="bu">sum</span>()</span>
+<span id="cb124-9"><a href="#cb124-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb124-10"><a href="#cb124-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Feature importance by frequency band:"</span>)</span>
+<span id="cb124-11"><a href="#cb124-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(band_importances)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Feature importance by frequency band:
+{'delta': np.float64(0.19434356762881783), 'theta': np.float64(0.23743705248074046), 'alpha': np.float64(0.18166827010840936), 'beta': np.float64(0.18932157908278535), 'gamma': np.float64(0.1873480576499716)}</code></pre>
+</div>
+</div>
+<div id="cell-22" class="cell" data-outputid="d06d9fcd-93b7-47cc-8ffb-f7b36341e231">
+<div class="sourceCode cell-code" id="cb126"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb126-1"><a href="#cb126-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb126-2"><a href="#cb126-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb126-3"><a href="#cb126-3" aria-hidden="true" tabindex="-1"></a>plt.bar(band_importances.keys(), band_importances.values())</span>
+<span id="cb126-4"><a href="#cb126-4" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Feature importance"</span>)</span>
+<span id="cb126-5"><a href="#cb126-5" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Discriminative frequency bands for MDD vs HC"</span>)</span>
+<span id="cb126-6"><a href="#cb126-6" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="EEG_analysis_files/figure-html/cell-15-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="rigorous-statistical-validation" class="level3">
+<h3 class="anchored" data-anchor-id="rigorous-statistical-validation">Rigorous Statistical Validation</h3>
+<p>Building on the exploratory findings, I wanted to scientifically validate whether the identified EEG patterns could reliably distinguish MDD patients from healthy controls and determine if any observed differences were statistically meaningful. I used the same Random Forest approach but with proper train-test splitting to evaluate real-world diagnostic performance - testing the model on completely unseen subjects to assess how accurately it could predict depression status.</p>
+<p>Using the trained model, I again calculated feature importance scores for each EEG measurement and summed them across electrodes to get frequency band-level importance scores. However, this time I ensured the analysis used only training data to avoid inflated importance estimates.</p>
+<p>Lastly, I performed a permutation test where group labels (MDD vs healthy control) were randomly shuffled 1,000 times and the model was re-run each time. This allowed me to determine if the observed importance of each frequency band was significantly greater than what we would expect by random chance, quantified by p-values. This statistical testing proved whether the brain wave differences identified in my exploratory analysis represented genuine biomarkers rather than spurious patterns.</p>
+<div id="cell-24" class="cell" data-outputid="c34daa01-7ddb-4713-d581-ca9f00c80d64">
+<div class="sourceCode cell-code" id="cb127"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb127-1"><a href="#cb127-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.ensemble <span class="im">import</span> RandomForestClassifier</span>
+<span id="cb127-2"><a href="#cb127-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb127-3"><a href="#cb127-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> accuracy_score</span>
+<span id="cb127-4"><a href="#cb127-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-5"><a href="#cb127-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Split features/labels</span></span>
+<span id="cb127-6"><a href="#cb127-6" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> df_features.drop(columns<span class="op">=</span>[<span class="st">"subject"</span>, <span class="st">"group"</span>])</span>
+<span id="cb127-7"><a href="#cb127-7" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> df_features[<span class="st">"group"</span>].<span class="bu">map</span>({<span class="st">"HC"</span>: <span class="dv">0</span>, <span class="st">"MDD"</span>: <span class="dv">1</span>})</span>
+<span id="cb127-8"><a href="#cb127-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-9"><a href="#cb127-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Train/test split</span></span>
+<span id="cb127-10"><a href="#cb127-10" aria-hidden="true" tabindex="-1"></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(X, y, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb127-11"><a href="#cb127-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-12"><a href="#cb127-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Train model</span></span>
+<span id="cb127-13"><a href="#cb127-13" aria-hidden="true" tabindex="-1"></a>clf <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">500</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb127-14"><a href="#cb127-14" aria-hidden="true" tabindex="-1"></a>clf.fit(X_train, y_train)</span>
+<span id="cb127-15"><a href="#cb127-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-16"><a href="#cb127-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Baseline accuracy</span></span>
+<span id="cb127-17"><a href="#cb127-17" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> clf.predict(X_test)</span>
+<span id="cb127-18"><a href="#cb127-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Baseline accuracy:"</span>, accuracy_score(y_test, y_pred))</span>
+<span id="cb127-19"><a href="#cb127-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-20"><a href="#cb127-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Get real importances</span></span>
+<span id="cb127-21"><a href="#cb127-21" aria-hidden="true" tabindex="-1"></a>real_importances <span class="op">=</span> clf.feature_importances_</span>
+<span id="cb127-22"><a href="#cb127-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-23"><a href="#cb127-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Collapse importances by frequency band (ignore electrode index)</span></span>
+<span id="cb127-24"><a href="#cb127-24" aria-hidden="true" tabindex="-1"></a>band_means_real <span class="op">=</span> {}</span>
+<span id="cb127-25"><a href="#cb127-25" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> col, imp <span class="kw">in</span> <span class="bu">zip</span>(X.columns, real_importances):</span>
+<span id="cb127-26"><a href="#cb127-26" aria-hidden="true" tabindex="-1"></a>    band <span class="op">=</span> col.split(<span class="st">"_"</span>)[<span class="op">-</span><span class="dv">1</span>]   <span class="co"># e.g. "delta", "theta", etc.</span></span>
+<span id="cb127-27"><a href="#cb127-27" aria-hidden="true" tabindex="-1"></a>    band_means_real[band] <span class="op">=</span> band_means_real.get(band, <span class="dv">0</span>) <span class="op">+</span> imp</span>
+<span id="cb127-28"><a href="#cb127-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-29"><a href="#cb127-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Permutation test</span></span>
+<span id="cb127-30"><a href="#cb127-30" aria-hidden="true" tabindex="-1"></a>n_perms <span class="op">=</span> <span class="dv">1000</span></span>
+<span id="cb127-31"><a href="#cb127-31" aria-hidden="true" tabindex="-1"></a>band_means_null <span class="op">=</span> {band: [] <span class="cf">for</span> band <span class="kw">in</span> band_means_real.keys()}</span>
+<span id="cb127-32"><a href="#cb127-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-33"><a href="#cb127-33" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_perms):</span>
+<span id="cb127-34"><a href="#cb127-34" aria-hidden="true" tabindex="-1"></a>    y_perm <span class="op">=</span> np.random.permutation(y)  <span class="co"># shuffle labels</span></span>
+<span id="cb127-35"><a href="#cb127-35" aria-hidden="true" tabindex="-1"></a>    clf_perm <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">200</span>, random_state<span class="op">=</span><span class="dv">42</span>, n_jobs<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb127-36"><a href="#cb127-36" aria-hidden="true" tabindex="-1"></a>    clf_perm.fit(X_train, np.random.permutation(y_train))  <span class="co"># shuffle training labels</span></span>
+<span id="cb127-37"><a href="#cb127-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-38"><a href="#cb127-38" aria-hidden="true" tabindex="-1"></a>    perm_importances <span class="op">=</span> clf_perm.feature_importances_</span>
+<span id="cb127-39"><a href="#cb127-39" aria-hidden="true" tabindex="-1"></a>    band_sums <span class="op">=</span> {}</span>
+<span id="cb127-40"><a href="#cb127-40" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> col, imp <span class="kw">in</span> <span class="bu">zip</span>(X.columns, perm_importances):</span>
+<span id="cb127-41"><a href="#cb127-41" aria-hidden="true" tabindex="-1"></a>        band <span class="op">=</span> col.split(<span class="st">"_"</span>)[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb127-42"><a href="#cb127-42" aria-hidden="true" tabindex="-1"></a>        band_sums[band] <span class="op">=</span> band_sums.get(band, <span class="dv">0</span>) <span class="op">+</span> imp</span>
+<span id="cb127-43"><a href="#cb127-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-44"><a href="#cb127-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> band <span class="kw">in</span> band_means_null.keys():</span>
+<span id="cb127-45"><a href="#cb127-45" aria-hidden="true" tabindex="-1"></a>        band_means_null[band].append(band_sums.get(band, <span class="dv">0</span>))</span>
+<span id="cb127-46"><a href="#cb127-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-47"><a href="#cb127-47" aria-hidden="true" tabindex="-1"></a>    null_importances <span class="op">=</span> {band: [] <span class="cf">for</span> band <span class="kw">in</span> bands}</span>
+<span id="cb127-48"><a href="#cb127-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-49"><a href="#cb127-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute p-values</span></span>
+<span id="cb127-50"><a href="#cb127-50" aria-hidden="true" tabindex="-1"></a>p_values <span class="op">=</span> {}</span>
+<span id="cb127-51"><a href="#cb127-51" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> band_means_real.keys():</span>
+<span id="cb127-52"><a href="#cb127-52" aria-hidden="true" tabindex="-1"></a>    null_dist <span class="op">=</span> np.array(band_means_null[band])</span>
+<span id="cb127-53"><a href="#cb127-53" aria-hidden="true" tabindex="-1"></a>    real_val <span class="op">=</span> band_means_real[band]</span>
+<span id="cb127-54"><a href="#cb127-54" aria-hidden="true" tabindex="-1"></a>    p_val <span class="op">=</span> (np.<span class="bu">sum</span>(null_dist <span class="op">&gt;=</span> real_val) <span class="op">+</span> <span class="dv">1</span>) <span class="op">/</span> (n_perms <span class="op">+</span> <span class="dv">1</span>)  <span class="co"># one-sided</span></span>
+<span id="cb127-55"><a href="#cb127-55" aria-hidden="true" tabindex="-1"></a>    p_values[band] <span class="op">=</span> p_val</span>
+<span id="cb127-56"><a href="#cb127-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-57"><a href="#cb127-57" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Real band importances:"</span>, band_means_real)</span>
+<span id="cb127-58"><a href="#cb127-58" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Permutation p-values:"</span>, p_values)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Baseline accuracy: 0.36363636363636365</code></pre>
+</div>
+<div class="cell-output cell-output-error">
+<div class="ansi-escaped-output">
+<pre><span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
+<span class="ansi-green-fg">/tmp/ipython-input-1736112117.py</span> in <span class="ansi-cyan-fg">&lt;cell line: 0&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-fg ansi-bold">     34</span>     y_perm <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>random<span class="ansi-blue-fg">.</span>permutation<span class="ansi-blue-fg">(</span>y<span class="ansi-blue-fg">)</span>  <span class="ansi-red-fg"># shuffle labels</span>
+<span class="ansi-green-fg ansi-bold">     35</span>     clf_perm <span class="ansi-blue-fg">=</span> RandomForestClassifier<span class="ansi-blue-fg">(</span>n_estimators<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">200</span><span class="ansi-blue-fg">,</span> random_state<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">42</span><span class="ansi-blue-fg">,</span> n_jobs<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">---&gt; 36</span><span class="ansi-red-fg">     </span>clf_perm<span class="ansi-blue-fg">.</span>fit<span class="ansi-blue-fg">(</span>X_train<span class="ansi-blue-fg">,</span> np<span class="ansi-blue-fg">.</span>random<span class="ansi-blue-fg">.</span>permutation<span class="ansi-blue-fg">(</span>y_train<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>  <span class="ansi-red-fg"># shuffle training labels</span>
+<span class="ansi-green-fg ansi-bold">     37</span> 
+<span class="ansi-green-fg ansi-bold">     38</span>     perm_importances <span class="ansi-blue-fg">=</span> clf_perm<span class="ansi-blue-fg">.</span>feature_importances_
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/base.py</span> in <span class="ansi-cyan-fg">wrapper</span><span class="ansi-blue-fg">(estimator, *args, **kwargs)</span>
+<span class="ansi-green-fg ansi-bold">   1387</span>                 )
+<span class="ansi-green-fg ansi-bold">   1388</span>             ):
+<span class="ansi-green-fg">-&gt; 1389</span><span class="ansi-red-fg">                 </span><span class="ansi-green-fg">return</span> fit_method<span class="ansi-blue-fg">(</span>estimator<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">   1390</span> 
+<span class="ansi-green-fg ansi-bold">   1391</span>         <span class="ansi-green-fg">return</span> wrapper
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/ensemble/_forest.py</span> in <span class="ansi-cyan-fg">fit</span><span class="ansi-blue-fg">(self, X, y, sample_weight)</span>
+<span class="ansi-green-fg ansi-bold">    475</span> 
+<span class="ansi-green-fg ansi-bold">    476</span>             trees = [
+<span class="ansi-green-fg">--&gt; 477</span><span class="ansi-red-fg">                 </span>self<span class="ansi-blue-fg">.</span>_make_estimator<span class="ansi-blue-fg">(</span>append<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">False</span><span class="ansi-blue-fg">,</span> random_state<span class="ansi-blue-fg">=</span>random_state<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    478</span>                 <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> range<span class="ansi-blue-fg">(</span>n_more_estimators<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    479</span>             ]
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/ensemble/_base.py</span> in <span class="ansi-cyan-fg">_make_estimator</span><span class="ansi-blue-fg">(self, append, random_state)</span>
+<span class="ansi-green-fg ansi-bold">    139</span>         sub<span class="ansi-blue-fg">-</span>estimators<span class="ansi-blue-fg">.</span>
+<span class="ansi-green-fg ansi-bold">    140</span>         """
+<span class="ansi-green-fg">--&gt; 141</span><span class="ansi-red-fg">         </span>estimator <span class="ansi-blue-fg">=</span> clone<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>estimator_<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    142</span>         estimator<span class="ansi-blue-fg">.</span>set_params<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">**</span><span class="ansi-blue-fg">{</span>p<span class="ansi-blue-fg">:</span> getattr<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> p<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">for</span> p <span class="ansi-green-fg">in</span> self<span class="ansi-blue-fg">.</span>estimator_params<span class="ansi-blue-fg">}</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    143</span> 
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/base.py</span> in <span class="ansi-cyan-fg">clone</span><span class="ansi-blue-fg">(estimator, safe)</span>
+<span class="ansi-green-fg ansi-bold">     92</span>     """
+<span class="ansi-green-fg ansi-bold">     93</span>     <span class="ansi-green-fg">if</span> hasattr<span class="ansi-blue-fg">(</span>estimator<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"__sklearn_clone__"</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">and</span> <span class="ansi-green-fg">not</span> inspect<span class="ansi-blue-fg">.</span>isclass<span class="ansi-blue-fg">(</span>estimator<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 94</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> estimator<span class="ansi-blue-fg">.</span>__sklearn_clone__<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">     95</span>     <span class="ansi-green-fg">return</span> _clone_parametrized<span class="ansi-blue-fg">(</span>estimator<span class="ansi-blue-fg">,</span> safe<span class="ansi-blue-fg">=</span>safe<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">     96</span> 
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/base.py</span> in <span class="ansi-cyan-fg">__sklearn_clone__</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-fg ansi-bold">    298</span> 
+<span class="ansi-green-fg ansi-bold">    299</span>     <span class="ansi-green-fg">def</span> __sklearn_clone__<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 300</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> _clone_parametrized<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    301</span> 
+<span class="ansi-green-fg ansi-bold">    302</span>     <span class="ansi-green-fg">def</span> __repr__<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> N_CHAR_MAX<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">700</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/base.py</span> in <span class="ansi-cyan-fg">_clone_parametrized</span><span class="ansi-blue-fg">(estimator, safe)</span>
+<span class="ansi-green-fg ansi-bold">    123</span> 
+<span class="ansi-green-fg ansi-bold">    124</span>     klass <span class="ansi-blue-fg">=</span> estimator<span class="ansi-blue-fg">.</span>__class__
+<span class="ansi-green-fg">--&gt; 125</span><span class="ansi-red-fg">     </span>new_object_params <span class="ansi-blue-fg">=</span> estimator<span class="ansi-blue-fg">.</span>get_params<span class="ansi-blue-fg">(</span>deep<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">False</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    126</span>     <span class="ansi-green-fg">for</span> name<span class="ansi-blue-fg">,</span> param <span class="ansi-green-fg">in</span> new_object_params<span class="ansi-blue-fg">.</span>items<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    127</span>         new_object_params<span class="ansi-blue-fg">[</span>name<span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> clone<span class="ansi-blue-fg">(</span>param<span class="ansi-blue-fg">,</span> safe<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">False</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/base.py</span> in <span class="ansi-cyan-fg">get_params</span><span class="ansi-blue-fg">(self, deep)</span>
+<span class="ansi-green-fg ansi-bold">    245</span>         """
+<span class="ansi-green-fg ansi-bold">    246</span>         out <span class="ansi-blue-fg">=</span> dict<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 247</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">for</span> key <span class="ansi-green-fg">in</span> self<span class="ansi-blue-fg">.</span>_get_param_names<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    248</span>             value <span class="ansi-blue-fg">=</span> getattr<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> key<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    249</span>             <span class="ansi-green-fg">if</span> deep <span class="ansi-green-fg">and</span> hasattr<span class="ansi-blue-fg">(</span>value<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"get_params"</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">and</span> <span class="ansi-green-fg">not</span> isinstance<span class="ansi-blue-fg">(</span>value<span class="ansi-blue-fg">,</span> type<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/sklearn/base.py</span> in <span class="ansi-cyan-fg">_get_param_names</span><span class="ansi-blue-fg">(cls)</span>
+<span class="ansi-green-fg ansi-bold">    210</span>         <span class="ansi-red-fg"># introspect the constructor arguments to find the model parameters</span>
+<span class="ansi-green-fg ansi-bold">    211</span>         <span class="ansi-red-fg"># to represent</span>
+<span class="ansi-green-fg">--&gt; 212</span><span class="ansi-red-fg">         </span>init_signature <span class="ansi-blue-fg">=</span> inspect<span class="ansi-blue-fg">.</span>signature<span class="ansi-blue-fg">(</span>init<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    213</span>         <span class="ansi-red-fg"># Consider the constructor parameters excluding 'self'</span>
+<span class="ansi-green-fg ansi-bold">    214</span>         parameters = [
+
+<span class="ansi-green-fg">/usr/lib/python3.12/inspect.py</span> in <span class="ansi-cyan-fg">signature</span><span class="ansi-blue-fg">(obj, follow_wrapped, globals, locals, eval_str)</span>
+<span class="ansi-green-fg ansi-bold">   3346</span> <span class="ansi-green-fg">def</span> signature<span class="ansi-blue-fg">(</span>obj<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span><span class="ansi-blue-fg">,</span> follow_wrapped<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">True</span><span class="ansi-blue-fg">,</span> globals<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> locals<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">None</span><span class="ansi-blue-fg">,</span> eval_str<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">False</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">   3347</span>     <span class="ansi-blue-fg">"""Get a signature object for the passed callable."""</span>
+<span class="ansi-green-fg">-&gt; 3348</span><span class="ansi-red-fg">     return Signature.from_callable(obj, follow_wrapped=follow_wrapped,
+</span><span class="ansi-green-fg ansi-bold">   3349</span>                                    globals=globals, locals=locals, eval_str=eval_str)
+<span class="ansi-green-fg ansi-bold">   3350</span> 
+
+<span class="ansi-green-fg">/usr/lib/python3.12/inspect.py</span> in <span class="ansi-cyan-fg">from_callable</span><span class="ansi-blue-fg">(cls, obj, follow_wrapped, globals, locals, eval_str)</span>
+<span class="ansi-green-fg ansi-bold">   3083</span>                       follow_wrapped=True, globals=None, locals=None, eval_str=False):
+<span class="ansi-green-fg ansi-bold">   3084</span>         <span class="ansi-blue-fg">"""Constructs Signature for the given callable object."""</span>
+<span class="ansi-green-fg">-&gt; 3085</span><span class="ansi-red-fg">         return _signature_from_callable(obj, sigcls=cls,
+</span><span class="ansi-green-fg ansi-bold">   3086</span>                                         follow_wrapper_chains<span class="ansi-blue-fg">=</span>follow_wrapped<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg ansi-bold">   3087</span>                                         globals=globals, locals=locals, eval_str=eval_str)
+
+<span class="ansi-green-fg">/usr/lib/python3.12/inspect.py</span> in <span class="ansi-cyan-fg">_signature_from_callable</span><span class="ansi-blue-fg">(obj, follow_wrapper_chains, skip_bound_arg, globals, locals, eval_str, sigcls)</span>
+<span class="ansi-green-fg ansi-bold">   2595</span>         <span class="ansi-red-fg"># If it's a pure Python function, or an object that is duck type</span>
+<span class="ansi-green-fg ansi-bold">   2596</span>         <span class="ansi-red-fg"># of a Python function (Cython functions, for instance), then:</span>
+<span class="ansi-green-fg">-&gt; 2597</span><span class="ansi-red-fg">         return _signature_from_function(sigcls, obj,
+</span><span class="ansi-green-fg ansi-bold">   2598</span>                                         skip_bound_arg<span class="ansi-blue-fg">=</span>skip_bound_arg<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg ansi-bold">   2599</span>                                         globals=globals, locals=locals, eval_str=eval_str)
+
+<span class="ansi-green-fg">/usr/lib/python3.12/inspect.py</span> in <span class="ansi-cyan-fg">_signature_from_function</span><span class="ansi-blue-fg">(cls, func, skip_bound_arg, globals, locals, eval_str)</span>
+<span class="ansi-green-fg ansi-bold">   2466</span>         default <span class="ansi-blue-fg">=</span> _empty
+<span class="ansi-green-fg ansi-bold">   2467</span>         <span class="ansi-green-fg">if</span> kwdefaults <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">-&gt; 2468</span><span class="ansi-red-fg">             </span>default <span class="ansi-blue-fg">=</span> kwdefaults<span class="ansi-blue-fg">.</span>get<span class="ansi-blue-fg">(</span>name<span class="ansi-blue-fg">,</span> _empty<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">   2469</span> 
+<span class="ansi-green-fg ansi-bold">   2470</span>         annotation <span class="ansi-blue-fg">=</span> annotations<span class="ansi-blue-fg">.</span>get<span class="ansi-blue-fg">(</span>name<span class="ansi-blue-fg">,</span> _empty<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-red-fg">KeyboardInterrupt</span>: </pre>
+</div>
+</div>
+</div>
+</section>
+<section id="plotting-machine-learning-data" class="level3">
+<h3 class="anchored" data-anchor-id="plotting-machine-learning-data">Plotting Machine Learning Data</h3>
+<p>This code creates a bar graph showing whhich EEG frequency bands were most important for distinguishing MDD from HC. Each bar aims to represent the contribution of a frequency band to the model’s accuracy, where a taller bar indicates stronger influence. As by the graph, we can see that the theta band shows the highest influence.</p>
+<div id="cell-26" class="cell" data-outputid="dccb83d2-1f27-4c82-fa13-d0b1e7937079">
+<div class="sourceCode cell-code" id="cb129"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb129-1"><a href="#cb129-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb129-2"><a href="#cb129-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-3"><a href="#cb129-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Makes sure values are stroed as dictionaries with frequency band as keys</span></span>
+<span id="cb129-4"><a href="#cb129-4" aria-hidden="true" tabindex="-1"></a>bands <span class="op">=</span> [<span class="st">'delta'</span>, <span class="st">'theta'</span>, <span class="st">'alpha'</span>, <span class="st">'beta'</span>, <span class="st">'gamma'</span>]</span>
+<span id="cb129-5"><a href="#cb129-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-6"><a href="#cb129-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(real_importances, <span class="bu">dict</span>):</span>
+<span id="cb129-7"><a href="#cb129-7" aria-hidden="true" tabindex="-1"></a>    real_importances <span class="op">=</span> {band: <span class="bu">float</span>(val) <span class="cf">for</span> band, val <span class="kw">in</span> <span class="bu">zip</span>(bands, real_importances)}</span>
+<span id="cb129-8"><a href="#cb129-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-9"><a href="#cb129-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(p_values, <span class="bu">dict</span>):</span>
+<span id="cb129-10"><a href="#cb129-10" aria-hidden="true" tabindex="-1"></a>    p_values <span class="op">=</span> {band: <span class="bu">float</span>(val) <span class="cf">for</span> band, val <span class="kw">in</span> <span class="bu">zip</span>(bands, p_values)}</span>
+<span id="cb129-11"><a href="#cb129-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-12"><a href="#cb129-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-13"><a href="#cb129-13" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Plot real importances ---</span></span>
+<span id="cb129-14"><a href="#cb129-14" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
+<span id="cb129-15"><a href="#cb129-15" aria-hidden="true" tabindex="-1"></a>bands <span class="op">=</span> <span class="bu">list</span>(real_importances.keys())</span>
+<span id="cb129-16"><a href="#cb129-16" aria-hidden="true" tabindex="-1"></a>real_vals <span class="op">=</span> [real_importances[b] <span class="cf">for</span> b <span class="kw">in</span> bands]</span>
+<span id="cb129-17"><a href="#cb129-17" aria-hidden="true" tabindex="-1"></a>pvals <span class="op">=</span> [p_values[b] <span class="cf">for</span> b <span class="kw">in</span> bands]</span>
+<span id="cb129-18"><a href="#cb129-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-19"><a href="#cb129-19" aria-hidden="true" tabindex="-1"></a>bars <span class="op">=</span> plt.bar(bands, real_vals, color<span class="op">=</span><span class="st">"skyblue"</span>, edgecolor<span class="op">=</span><span class="st">"black"</span>)</span>
+<span id="cb129-20"><a href="#cb129-20" aria-hidden="true" tabindex="-1"></a>plt.axhline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linewidth<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb129-21"><a href="#cb129-21" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Feature Importance (Mean Decrease in Accuracy)"</span>)</span>
+<span id="cb129-22"><a href="#cb129-22" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Band Importances with Permutation p-values"</span>)</span>
+<span id="cb129-23"><a href="#cb129-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-24"><a href="#cb129-24" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="EEG_analysis_files/figure-html/cell-17-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The code below trains the same classifier model into a nul distribution of feature importances. This is essential as by comparing the null to the real importances allows us to determine which frequency bands are statistically informative rather than appearing important by chance.</p>
+<div id="cell-28" class="cell">
+<div class="sourceCode cell-code" id="cb130"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb130-1"><a href="#cb130-1" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">200</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb130-2"><a href="#cb130-2" aria-hidden="true" tabindex="-1"></a>model.fit(X, y)</span>
+<span id="cb130-3"><a href="#cb130-3" aria-hidden="true" tabindex="-1"></a>baseline_acc <span class="op">=</span> accuracy_score(y, model.predict(X))</span>
+<span id="cb130-4"><a href="#cb130-4" aria-hidden="true" tabindex="-1"></a>real_importances <span class="op">=</span> <span class="bu">dict</span>(<span class="bu">zip</span>(bands, model.feature_importances_))</span>
+<span id="cb130-5"><a href="#cb130-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb130-6"><a href="#cb130-6" aria-hidden="true" tabindex="-1"></a>n_permutations <span class="op">=</span> <span class="dv">1000</span></span>
+<span id="cb130-7"><a href="#cb130-7" aria-hidden="true" tabindex="-1"></a>null_importances <span class="op">=</span> {band: [] <span class="cf">for</span> band <span class="kw">in</span> bands}</span>
+<span id="cb130-8"><a href="#cb130-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb130-9"><a href="#cb130-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_permutations):</span>
+<span id="cb130-10"><a href="#cb130-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Shuffle labels</span></span>
+<span id="cb130-11"><a href="#cb130-11" aria-hidden="true" tabindex="-1"></a>    y_perm <span class="op">=</span> np.random.permutation(y)</span>
+<span id="cb130-12"><a href="#cb130-12" aria-hidden="true" tabindex="-1"></a>    model.fit(X, y_perm)</span>
+<span id="cb130-13"><a href="#cb130-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb130-14"><a href="#cb130-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Store permutation importances</span></span>
+<span id="cb130-15"><a href="#cb130-15" aria-hidden="true" tabindex="-1"></a>    importances_perm <span class="op">=</span> model.feature_importances_</span>
+<span id="cb130-16"><a href="#cb130-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j, band <span class="kw">in</span> <span class="bu">enumerate</span>(bands):</span>
+<span id="cb130-17"><a href="#cb130-17" aria-hidden="true" tabindex="-1"></a>        null_importances[band].append(importances_perm[j])</span>
+<span id="cb130-18"><a href="#cb130-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb130-19"><a href="#cb130-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to arrays</span></span>
+<span id="cb130-20"><a href="#cb130-20" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb130-21"><a href="#cb130-21" aria-hidden="true" tabindex="-1"></a>    null_importances[band] <span class="op">=</span> np.array(null_importances[band])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Thus, we plotted a histogram for all EEG frequency bands of feature importances obtained from shuffling labels to represent what would be expected by chance. The real importance is labled as a red dashed line. If the red line falls far outside of the histogram, it indicates that the frequency band contributes to distinguishing MDD from healthy ctonrols more than would be expected randomly.</p>
+<div id="cell-30" class="cell" data-outputid="c0b91998-a123-4c4d-ec4c-4f63f694a841">
+<div class="sourceCode cell-code" id="cb131"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb131-1"><a href="#cb131-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Loop through each frequency band</span></span>
+<span id="cb131-2"><a href="#cb131-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> band <span class="kw">in</span> bands:</span>
+<span id="cb131-3"><a href="#cb131-3" aria-hidden="true" tabindex="-1"></a>    plt.figure(figsize<span class="op">=</span>(<span class="dv">6</span>,<span class="dv">4</span>))</span>
+<span id="cb131-4"><a href="#cb131-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb131-5"><a href="#cb131-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Histogram of null importances for this band</span></span>
+<span id="cb131-6"><a href="#cb131-6" aria-hidden="true" tabindex="-1"></a>    plt.hist(null_importances[band], bins<span class="op">=</span><span class="dv">20</span>, color<span class="op">=</span><span class="st">"lightgray"</span>, edgecolor<span class="op">=</span><span class="st">"black"</span>)</span>
+<span id="cb131-7"><a href="#cb131-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb131-8"><a href="#cb131-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Add vertical line for the real importance</span></span>
+<span id="cb131-9"><a href="#cb131-9" aria-hidden="true" tabindex="-1"></a>    plt.axvline(real_importances[band], color<span class="op">=</span><span class="st">"red"</span>, linestyle<span class="op">=</span><span class="st">"--"</span>, linewidth<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="cb131-10"><a href="#cb131-10" aria-hidden="true" tabindex="-1"></a>                label<span class="op">=</span><span class="ss">f"Real importance = </span><span class="sc">{</span>real_importances[band]<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb131-11"><a href="#cb131-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb131-12"><a href="#cb131-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Title and labels</span></span>
+<span id="cb131-13"><a href="#cb131-13" aria-hidden="true" tabindex="-1"></a>    plt.title(<span class="ss">f"Null vs. Real Importances - </span><span class="sc">{</span>band<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb131-14"><a href="#cb131-14" aria-hidden="true" tabindex="-1"></a>    plt.xlabel(<span class="st">"Importance"</span>)</span>
+<span id="cb131-15"><a href="#cb131-15" aria-hidden="true" tabindex="-1"></a>    plt.ylabel(<span class="st">"Count"</span>)</span>
+<span id="cb131-16"><a href="#cb131-16" aria-hidden="true" tabindex="-1"></a>    plt.legend()</span>
+<span id="cb131-17"><a href="#cb131-17" aria-hidden="true" tabindex="-1"></a>    plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="EEG_analysis_files/figure-html/cell-19-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="EEG_analysis_files/figure-html/cell-19-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="EEG_analysis_files/figure-html/cell-19-output-3.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="EEG_analysis_files/figure-html/cell-19-output-4.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="EEG_analysis_files/figure-html/cell-19-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="discussion" class="level3">
+<h3 class="anchored" data-anchor-id="discussion">Discussion</h3>
+<p>While the delta band shows higher values in the null distribution, its real importance in model is smaller than theta. This indicates that the theta band linkly is more genuinely discriminative for separating MDD from healthy controls, whereas delta may be from reciving artifically high importance.</p>
+</section>
+<section id="in-a-biological-context" class="level3">
+<h3 class="anchored" data-anchor-id="in-a-biological-context">In a biological context</h3>
+<p>In our analysis, theta-band activity emerged as the most discriminative EEG feature for distinguishing MDD patients from healthy controls. Delta-band features, although frequently highlighted by the model in permutation tests, were less informative in the real data, suggesting that delta may reflect general EEG variability rather than MDD-specific differences.</p>
+<p>This finding aligns with prior EEG research that implicates frontal and midline theta rhythms in depression and further connects to clinical outcomes. For instance, de la Salle et al.&nbsp;(2020) reported that early treatment-related changes in prefrontal and midline right frontal theta cordance predicted antidepressant response in MDD patients. Together, these results reinforce the central role of theta-band activity in depression, with our study identifying it as a key diagnostic marker distinguishing patients from controls, and de la Salle et al.’s work highlighting its prognostic value for treatment outcomes.</p>
+</section>
+<section id="citations" class="level3">
+<h3 class="anchored" data-anchor-id="citations">Citations</h3>
+<p><em>de la Salle, S., Jaworska, N., Blier, P., Smith, D., &amp; Knott, V. (2020, May 22). Using prefrontal and midline right frontal EEG-derived theta cordance and depressive symptoms to predict the differential response or remission to antidepressant treatment in major depressive disorder. Psychiatry Research: Neuroimaging.</em> https://www.sciencedirect.com/science/article/pii/S0925492720300810</p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
