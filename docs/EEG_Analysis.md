@@ -1,7 +1,3 @@
-
-
-<a href="https://colab.research.google.com/github/yurim-nam/healthlytics/blob/main/EEG_Analysis.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
-
 # Project 2: EEG Depression Analysis
 
 We extract power spectral density features from 128-channel EEG
